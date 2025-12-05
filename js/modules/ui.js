@@ -174,8 +174,8 @@ export function initUI() {
         // Show loading on AI button
         if (aiBtn) {
             aiBtn.disabled = true;
-            aiBtn.innerHTML = '⏳';
-            aiBtn.title = 'Analyzing...';
+            aiBtn.innerHTML = '<span class="ai-thinking">🧠</span>';
+            aiBtn.title = 'AI is thinking...';
         }
 
         try {
