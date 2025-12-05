@@ -38,6 +38,7 @@ export function buildAnalysisPrompt(requests) {
     const prompt = `Analyze these HTTP requests and group them into security-relevant attack surface categories.
 
 IMPORTANT: Create categories dynamically based on what you see in the requests. Don't use a predefined list.
+EVERY request MUST have a category. Do not use "Uncategorized" or "Unknown". If unsure, use generic categories like "General Request", "Static Resource", or "API Endpoint".
 
 Common patterns to look for:
 - Authentication & session management
@@ -84,12 +85,56 @@ export function parseCategories(response) {
     try {
         // Extract JSON from markdown code blocks if present
         let jsonText = response.trim();
-        const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-        if (jsonMatch) {
-            jsonText = jsonMatch[1];
+
+        // Try to find JSON array pattern
+        const jsonArrayMatch = jsonText.match(/\[\s*\{[\s\S]*\}\s*\]/);
+        if (jsonArrayMatch) {
+            jsonText = jsonArrayMatch[0];
+        } else {
+            // Fallback: try to find code block
+            const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+            if (jsonMatch) {
+                jsonText = jsonMatch[1];
+            }
         }
 
-        const categories = JSON.parse(jsonText);
+        let categories;
+        try {
+            categories = JSON.parse(jsonText);
+        } catch (e) {
+            console.warn('Main JSON parse failed, attempting regex extraction', e);
+            // Fallback: Extract individual objects using regex
+            categories = [];
+            const objectRegex = /\{\s*"index"\s*:\s*(\d+)[^}]*?"category"\s*:\s*"([^"]*)"[^}]*?\}/g;
+            let match;
+
+            // We need a more robust regex that captures the full object structure
+            // This is a simplified attempt to salvage data
+            const robustRegex = /\{\s*"index"[\s\S]*?\}/g;
+            const matches = jsonText.match(robustRegex) || [];
+
+            for (const itemStr of matches) {
+                try {
+                    // Try to parse each item individually
+                    // Add missing braces if needed (though regex should catch them)
+                    const item = JSON.parse(itemStr);
+                    if (item && typeof item.index !== 'undefined') {
+                        categories.push(item);
+                    }
+                } catch (err) {
+                    // Try to fix common JSON errors (trailing commas, etc)
+                    try {
+                        const fixedStr = itemStr.replace(/,\s*\}/g, '}').replace(/,\s*\]/g, ']');
+                        const item = JSON.parse(fixedStr);
+                        if (item && typeof item.index !== 'undefined') {
+                            categories.push(item);
+                        }
+                    } catch (err2) {
+                        // Give up on this item
+                    }
+                }
+            }
+        }
 
         // Validate structure
         if (!Array.isArray(categories)) {
@@ -98,13 +143,14 @@ export function parseCategories(response) {
 
         return categories.map(cat => ({
             index: cat.index,
-            category: cat.category || 'Uncategorized',
+            category: cat.category || 'General Request',
             confidence: cat.confidence || 'low',
             reasoning: cat.reasoning || 'No reasoning provided',
             icon: cat.icon || '❓'
         }));
     } catch (error) {
         console.error('Failed to parse LLM response:', error);
+        console.log('Raw response:', response); // Log raw response for debugging
         return [];
     }
 }
