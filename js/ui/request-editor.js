@@ -3,6 +3,7 @@ import { state, addToHistory } from '../core/state.js';
 import { highlightHTTP } from '../core/utils/network.js';
 import { generateHexView } from './hex-view.js';
 import { events, EVENT_NAMES } from '../core/events.js';
+import { getStatusClass, formatRawResponse } from '../network/response-parser.js';
 
 export function selectRequest(index) {
     state.selectedRequest = state.requests[index];
@@ -60,6 +61,38 @@ export function selectRequest(index) {
         useHttps,
         request: state.selectedRequest
     });
+
+    // If we have captured response data, show it immediately
+    if (state.selectedRequest.responseBody !== undefined) {
+        const status = state.selectedRequest.responseStatus || '';
+        const statusText = state.selectedRequest.responseStatusText || '';
+        const responseHeaders = state.selectedRequest.responseHeaders || [];
+        const responseBody = state.selectedRequest.responseBody || '';
+
+        const rawResponse = formatRawResponse({
+            status,
+            statusText,
+            headers: responseHeaders,
+            body: responseBody
+        });
+
+        state.currentResponse = rawResponse;
+
+        // Estimate size from body length
+        const sizeBytes = new TextEncoder().encode(responseBody || '').length;
+        const sizeLabel = sizeBytes ? `${sizeBytes} bytes` : '';
+
+        events.emit(EVENT_NAMES.UI_UPDATE_RESPONSE_VIEW, {
+            status: status ? `${status} ${statusText}`.trim() : '',
+            statusClass: getStatusClass(Number(status) || 0),
+            time: '', // devtools listener doesn't provide timing per request; leave empty
+            size: sizeLabel,
+            content: rawResponse,
+            diffEnabled: false,
+            baseline: null,
+            showDiff: false
+        });
+    }
 }
 
 export function toggleLayout(save = true) {

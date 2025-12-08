@@ -1,6 +1,6 @@
 // Main UI Module - Initialization and re-exports
 import { state } from '../core/state.js';
-import { getHostname } from '../core/utils/network.js';
+import { getHostname, highlightHTTP } from '../core/utils/network.js';
 import { events, EVENT_NAMES } from '../core/events.js';
 import { filterRequests } from './request-list.js';
 import { selectRequest, switchRequestView, switchResponseView, toggleLayout } from './request-editor.js';
@@ -321,6 +321,25 @@ function setupEventListeners() {
         if (elements.rawRequestInput) {
             elements.rawRequestInput.innerText = text;
             elements.rawRequestInput.innerHTML = highlighted;
+        }
+    });
+
+    // Update response view (captured or replayed)
+    events.on(EVENT_NAMES.UI_UPDATE_RESPONSE_VIEW, ({ status, statusClass, time, size, content }) => {
+        if (elements.resStatus) {
+            elements.resStatus.textContent = status || '';
+            elements.resStatus.className = statusClass || 'status-badge';
+        }
+        if (elements.resTime) {
+            elements.resTime.textContent = time || '';
+        }
+        if (elements.resSize) {
+            elements.resSize.textContent = size || '';
+        }
+        if (elements.rawResponseDisplay) {
+            elements.rawResponseDisplay.innerHTML = highlightHTTP(content || '');
+            elements.rawResponseDisplay.style.display = 'block';
+            elements.rawResponseDisplay.style.visibility = 'visible';
         }
     });
 

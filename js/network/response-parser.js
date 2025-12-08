@@ -7,20 +7,28 @@
  */
 export function formatRawResponse(result) {
     // Build raw HTTP response
-    let rawResponse = `HTTP/1.1 ${result.status} ${result.statusText}\n`;
+    const statusLine = `HTTP/1.1 ${result.status || ''} ${result.statusText || ''}`.trim();
+    let rawResponse = `${statusLine}\n`;
     
-    // Add headers
-    for (const [key, value] of result.headers) {
-        rawResponse += `${key}: ${value}\n`;
+    // Add headers (supports array of objects or iterable entries)
+    if (Array.isArray(result.headers)) {
+        result.headers.forEach(h => {
+            if (h && h.name) rawResponse += `${h.name}: ${h.value ?? ''}\n`;
+        });
+    } else if (result.headers && typeof result.headers[Symbol.iterator] === 'function') {
+        for (const [key, value] of result.headers) {
+            rawResponse += `${key}: ${value}\n`;
+        }
     }
     rawResponse += '\n';
 
     // Format body (try to pretty-print JSON)
+    const body = result.body ?? '';
     try {
-        const json = JSON.parse(result.body);
+        const json = JSON.parse(body);
         rawResponse += JSON.stringify(json, null, 2);
     } catch (e) {
-        rawResponse += result.body;
+        rawResponse += body;
     }
 
     return rawResponse;
