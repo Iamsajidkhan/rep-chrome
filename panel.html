@@ -673,6 +673,10 @@
                     <div id="secrets-pagination" class="pagination-container" style="display: none;"></div>
                     <p class="disclaimer-text"
                         style="margin-top: 15px; font-size: 11px; color: #888; border-top: 1px solid var(--border-color); padding-top: 10px;">
+                        <strong>Note:</strong> Secret scanning only analyzes JavaScript files from the <strong>current inspected tab</strong>.
+                    </p>
+                    <p class="disclaimer-text"
+                        style="margin-top: 10px; font-size: 11px; color: #888;">
                         <strong>Disclaimer:</strong> Automated scanning may produce false positives. Please manually
                         verify all findings.
                     </p>
@@ -779,6 +783,7 @@
     <script src="lib/html2canvas.min.js"></script>
     <script src="lib/marked.min.js"></script>
     <script src="lib/diff.min.js"></script>
+    <script src="lib/js-yaml.min.js"></script>
     <script type="module" src="js/main.js"></script>
 </body>
 
